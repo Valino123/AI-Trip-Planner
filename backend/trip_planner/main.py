@@ -7,6 +7,7 @@ from .user import CLI
 from .llm import init_llm
 from .role import role_template
 from .memory import SimpleMemory, compose_tmp_message
+from config import config
 
 
 def main():
@@ -18,11 +19,13 @@ def main():
 
     # Memory Instantiation
     state = {"messages": [SystemMessage(content=role_template)]}  # Short-term memory
-    USE_LTM = os.environ.get("USE_LTM", "0").lower() in {"1", "true", "yes"}
+    # USE_LTM = os.environ.get("USE_LTM", "0").lower() in {"1", "true", "yes"}
+    USE_LTM = config.USE_LTM
     mem = SimpleMemory(path="memory_store.jsonl") if USE_LTM else None  # Long-term memory
 
     # Context Scale Setting
-    MAX_CONTEXT_SCALE = int(os.environ.get("MAX_TURNS_IN_CONTEXT", "5"))
+    # MAX_CONTEXT_SCALE = int(os.environ.get("MAX_TURNS_IN_CONTEXT", "5"))
+    MAX_CONTEXT_SCALE = config.MAX_TURNS_IN_CONTEXT
     print(f"Memory: Short{'+Long' if USE_LTM else ''} | Max context scale: {MAX_CONTEXT_SCALE}")
 
     # Orchestrate

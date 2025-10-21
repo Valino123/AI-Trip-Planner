@@ -1,14 +1,16 @@
 # memory.py
 from __future__ import annotations
+from mimetypes import init
 import os, json, time, math, re
 from dataclasses import dataclass, asdict
 from typing import List, Dict, Any, Optional, Tuple
 from langchain_core.messages import SystemMessage, HumanMessage
 import numpy as np
-from langchain_openai import OpenAIEmbeddings
-from .llm import _get_api_key
+# from langchain_openai import OpenAIEmbeddings
+# from .llm import _get_api_key
+from .llm import init_embedder, init_llm
 
-EMBED_MODEL = os.environ.get("EMBED_MODEL", "text-embedding-3-small")
+# EMBED_MODEL = os.environ.get("EMBED_MODEL", "text-embedding-3-small")
 
 # --------------------------- helpers ---------------------------
 
@@ -53,7 +55,8 @@ class SimpleMemory:
         self.path = path
         self._items: List[MemoryItem] = []
         self._embs: Optional[np.ndarray] = None  # shape: [N, D], L2-normalized
-        self._embedder = OpenAIEmbeddings(model=EMBED_MODEL, api_key=_get_api_key())
+        # self._embedder = OpenAIEmbeddings(model=EMBED_MODEL, api_key=_get_api_key())
+        self._embedder = init_embedder()
         self._load()
 
     # --------------------- persistence ---------------------

@@ -47,11 +47,21 @@ except Exception:
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage, BaseMessage
 
 # -------------------- config --------------------
-DATA_ROOT = os.environ.get("DATA_ROOT", "./data")
-USE_LTM = os.environ.get("USE_LTM", "0").lower() in {"1", "true", "yes"}
-VERBOSE = os.environ.get("VERBOSE", "1").lower() in {"1", "true", "yes"}
-MAX_TURNS = int(os.environ.get("MAX_TURNS_IN_CONTEXT", "16"))
-KEEP_SYSTEM = int(os.environ.get("KEEP_SYSTEM", "2"))
+from config import config
+
+# DATA_ROOT = os.environ.get("DATA_ROOT", "./data")
+# USE_LTM = os.environ.get("USE_LTM", "0").lower() in {"1", "true", "yes"}
+# VERBOSE = os.environ.get("VERBOSE", "1").lower() in {"1", "true", "yes"}
+# MAX_TURNS = int(os.environ.get("MAX_TURNS_IN_CONTEXT", "16"))
+# KEEP_SYSTEM = int(os.environ.get("KEEP_SYSTEM", "2"))
+
+DATA_ROOT = config.DATA_ROOT
+USE_LTM = config.USE_LTM
+VERBOSE = config.VERBOSE
+MAX_TURNS = config.MAX_TURNS
+KEEP_SYSTEM = config.KEEP_SYSTEM
+HOST = config.HOST
+PORT = config.PORT
 
 app = Flask(__name__)
 CORS(app)
@@ -358,5 +368,7 @@ def chat():
 
 if __name__ == "__main__":
     os.makedirs(DATA_ROOT, exist_ok=True)
-    port = int(os.environ.get("PORT", "8080"))
-    app.run(host="0.0.0.0", port=port)
+    # port = int(os.environ.get("PORT", "8080"))
+    port = PORT
+    # app.run(host="0.0.0.0", port=port)
+    app.run(host=HOST, port=port)

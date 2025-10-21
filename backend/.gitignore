@@ -5,3 +5,5 @@ memory_store.jsonl
 user_data
 ADMIN_IDENTITY_TOKEN
 dist
+.venv
+.env
