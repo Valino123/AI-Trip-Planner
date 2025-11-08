@@ -1,8 +1,9 @@
 API_KEY
-user_token.txt 
-example0.jpg
-__pycache__
-eval 
-report 
-test 
-Dockerfile 
+user_token.txt
+/example0.jpg
+__pycache__/
+**/__pycache__/
+eval
+report
+test
+/Dockerfile

@@ -1,7 +1,5 @@
-__pycache__
-cli\__pycache__
-docs 
-examples 
-memory\__pycache__
-memory\connections\__pycache__ 
-memory\stores\__pycache__ 
+__pycache__/
+**/__pycache__/
+cli/__pycache__
+docs/
+examples/
