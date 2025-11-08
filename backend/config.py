@@ -54,26 +54,22 @@ class Config:
         self.MONGO_CONVERSATIONS_COLLECTION = os.getenv("MONGO_CONVERSATIONS_COLLECTION", "conversations")
         self.MONGO_PREFERENCES_COLLECTION = os.getenv("MONGO_PREFERENCES_COLLECTION", "user_preferences")
         
-        # PostgreSQL (Inter-session + Preferences)
-        self.PG_HOST = os.getenv("PG_HOST", "localhost")
-        self.PG_PORT = int(os.getenv("PG_PORT", "5432"))
-        self.PG_USER = os.getenv("PG_USER", "postgres")
-        self.PG_PASSWORD = os.getenv("PG_PASSWORD", "postgres")
-        self.PG_DATABASE = os.getenv("PG_DATABASE", "trip_planner")
-        self.PG_POOL_SIZE = int(os.getenv("PG_POOL_SIZE", "10"))
-        self.PG_MAX_OVERFLOW = int(os.getenv("PG_MAX_OVERFLOW", "20"))
-        
         # Qdrant (Vector search)
         self.QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
         self.QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
         self.QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
         self.QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "conversations")
         self.VECTOR_DIM = int(os.getenv("VECTOR_DIM", "1536"))
+        # Optional: unified URL + HTTPS toggle
+        self.QDRANT_URL = os.getenv("QDRANT_URL")
+        self.QDRANT_HTTPS = os.getenv("QDRANT_HTTPS", "False").lower() == "true"
         
         # Memory Feature Flags
-        self.USE_LEGACY_MEMORY = os.getenv("USE_LEGACY_MEMORY", "True").lower() == "true"  # Default to legacy for now
+        self.USE_LEGACY_MEMORY = os.getenv("USE_LEGACY_MEMORY", "False").lower() == "true"
         self.ENABLE_REDIS_CACHE = os.getenv("ENABLE_REDIS_CACHE", "True").lower() == "true"
         self.ENABLE_ASYNC_EMBEDDING = os.getenv("ENABLE_ASYNC_EMBEDDING", "True").lower() == "true"
+        self.ENABLE_PREF_EXTRACTION = os.getenv("ENABLE_PREF_EXTRACTION", "True").lower() == "true"
+        self.ENABLE_PREF_LLM_EXTRACTION = os.getenv("ENABLE_PREF_LLM_EXTRACTION", "False").lower() == "true"
 
     def get(self, key: str, default=None):
         return getattr(self, key, default)

@@ -32,10 +32,9 @@ from trip_planner.role import role_template
 
 # optional memory + context (graceful fallback if missing)
 try:
-    from trip_planner.memory import SimpleMemory, format_mem_snippets
+    from trip_planner.memory import create_memory_manager
 except Exception:
-    SimpleMemory = None
-    format_mem_snippets = None
+    create_memory_manager = None
 
 try:
     from trip_planner.context import trim_context as _trim_context
@@ -73,6 +72,17 @@ log.setLevel(logging.ERROR)  # 只输出错误日志（不打印普通请求）
 _llm = init_llm(TOOLS)
 _invoke = make_app(_llm, TOOLS)
 print(f"Memory: Short{'+Long' if USE_LTM else ''} | Max context scale: {MAX_TURNS}")
+
+# production memory manager (Redis + MongoDB + Qdrant)
+MEMORY = None
+if create_memory_manager is not None:
+    try:
+        MEMORY = create_memory_manager()
+        if VERBOSE:
+            print("[ProdServer] Production memory initialized")
+    except Exception as e:
+        MEMORY = None
+        print(f"[ProdServer] WARNING: Production memory unavailable: {e}")
 
 # -------------------- Frontend Hosting --------------------
 # 前端路由兜底：不是 /api 的都交给 index.html
@@ -231,20 +241,9 @@ def create_user():
     with open(_user_token_hash_path(user_id), "w", encoding="utf-8") as f:
         f.write(token_h)
 
-    # init memory with name/description (if memory module available)
-    if SimpleMemory is not None:
-        try:
-            mem = SimpleMemory(path=_user_memory_path(user_id))
-            if name:
-                mem.remember(f"User name: {name}", kind="profile", meta={})
-            if description:
-                mem.remember(f"User description: {description}", kind="profile", meta={})
-        except Exception:
-            pass
-    else:
-        # at least create empty file
-        _ensure_dir(udir)
-        open(_user_memory_path(user_id), "a", encoding="utf-8").close()
+    # keep filesystem stub to avoid breaking existing flows
+    _ensure_dir(udir)
+    open(_user_memory_path(user_id), "a", encoding="utf-8").close()
 
     return jsonify({"user_id": user_id, "identity_token": identity_token})
 
@@ -260,6 +259,12 @@ def create_session():
     _ensure_dir(sdir)
     # init state with a system message (role)
     _append_jsonl(_session_state_path(user_id, session_id), {"type":"system", "content": role_template, "ts": _now()})
+    # also seed into intra-session memory (Redis) if available
+    if MEMORY is not None:
+        try:
+            MEMORY.save_message_to_session(session_id, {"type":"system", "content": role_template, "ts": _now()})
+        except Exception:
+            pass
     # write simple index
     _write_json(os.path.join(sdir, "index.json"), {
         "session_id": session_id,
@@ -325,6 +330,12 @@ def chat():
     # 1) append the human message to state.jsonl
     statep = _session_state_path(user_id, session_id)
     _append_jsonl(statep, {"type": message.get("type","human"), "content": message.get("content",""), "ts": _now()})
+    # also write to intra-session memory
+    if MEMORY is not None:
+        try:
+            MEMORY.save_message_to_session(session_id, {"type": message.get("type","human"), "content": message.get("content",""), "ts": _now()})
+        except Exception:
+            pass
 
     # 2) read state messages
     raw_msgs = _read_jsonl(statep)
@@ -332,18 +343,17 @@ def chat():
     for r in raw_msgs:
         msgs_lc.append(_to_lc({"type": r.get("type"), "content": r.get("content")}))
 
-    # 3) optional memory injection (one-off SystemMessage)
-    if USE_LTM and SimpleMemory is not None:
+    # 3) optional inter-session memory injection (from MongoDB + Qdrant)
+    if USE_LTM and MEMORY is not None:
         last_human = None
         for m in reversed(msgs_lc):
             if isinstance(m, HumanMessage):
                 last_human = m.content; break
         if last_human:
             try:
-                mem = SimpleMemory(path=_user_memory_path(user_id))
-                snips = mem.retrieve(last_human, k=4, min_sim=0.55, verbose=VERBOSE)
-                if snips:
-                    mem_text = format_mem_snippets(snips)
+                memories = MEMORY.retrieve_relevant_memories(user_id, last_human, verbose=VERBOSE)
+                mem_text = MEMORY.format_memories_for_context(memories)
+                if mem_text:
                     insert_at = 1 if msgs_lc and isinstance(msgs_lc[0], SystemMessage) else 0
                     msgs_lc = msgs_lc[:insert_at] + [SystemMessage(content=mem_text)] + msgs_lc[insert_at:]
             except Exception:
@@ -357,14 +367,10 @@ def chat():
 
     # 5) append AI to persistent state
     _append_jsonl(statep, {"type": "ai", "content": ai_text, "ts": _now()})
-
-    # 6) optional: write to long term memory
-    if USE_LTM and SimpleMemory is not None:
+    # also write to intra-session memory
+    if MEMORY is not None:
         try:
-            mem = SimpleMemory(path=_user_memory_path(user_id))
-            last_user = message.get("content","")
-            snippet = (f"Q: {last_user}\nA: {ai_text}")[:800]
-            mem.remember(snippet, kind="turn", meta={"session_id": session_id})
+            MEMORY.save_message_to_session(session_id, {"type": "ai", "content": ai_text, "ts": _now()})
         except Exception:
             pass
 
@@ -377,6 +383,62 @@ def chat():
         yield f"data: {payload}\n\n"
         yield "event: done\ndata: {}\n\n"
     return Response(gen(), mimetype="text/event-stream")
+
+# -------------------- memory-related endpoints --------------------
+@app.post("/api/finalize_session")
+def finalize_session():
+    user_id = _auth_user(request)
+    if not user_id:
+        return jsonify({"error":"unauthorized"}), 401
+    if MEMORY is None:
+        return jsonify({"error":"memory unavailable"}), 500
+    data = request.get_json(force=True)
+    session_id = data.get("session_id", "")
+    if not session_id:
+        return jsonify({"error":"session_id required"}), 400
+    ok = False
+    try:
+        ok = MEMORY.finalize_session(user_id, session_id)
+    except Exception as e:
+        if VERBOSE:
+            print(f"[ProdServer] finalize_session failed: {e}")
+        ok = False
+    return jsonify({"ok": bool(ok)})
+
+@app.get("/api/preferences")
+def get_preferences():
+    user_id = _auth_user(request)
+    if not user_id:
+        return jsonify({"error":"unauthorized"}), 401
+    if MEMORY is None:
+        return jsonify({"error":"memory unavailable"}), 500
+    try:
+        prefs = MEMORY.get_user_preferences(user_id) or {}
+        return jsonify({"preferences": prefs})
+    except Exception as e:
+        if VERBOSE:
+            print(f"[ProdServer] get_preferences failed: {e}")
+        return jsonify({"preferences": {}})
+
+@app.post("/api/preferences")
+def update_preferences():
+    user_id = _auth_user(request)
+    if not user_id:
+        return jsonify({"error":"unauthorized"}), 401
+    if MEMORY is None:
+        return jsonify({"error":"memory unavailable"}), 500
+    data = request.get_json(force=True)
+    key = data.get("key")
+    value = data.get("value")
+    if not key:
+        return jsonify({"error":"key required"}), 400
+    try:
+        ok = MEMORY.update_user_preference(user_id, key, value)
+        return jsonify({"ok": bool(ok)})
+    except Exception as e:
+        if VERBOSE:
+            print(f"[ProdServer] update_preferences failed: {e}")
+        return jsonify({"ok": False}), 500
 
 
 if __name__ == "__main__":

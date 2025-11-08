@@ -38,10 +38,15 @@ class MemoryConfig:
         self.USE_LEGACY_MEMORY = getattr(main_config, 'USE_LEGACY_MEMORY', True)
         self.ENABLE_REDIS_CACHE = getattr(main_config, 'ENABLE_REDIS_CACHE', True)
         self.ENABLE_ASYNC_EMBEDDING = getattr(main_config, 'ENABLE_ASYNC_EMBEDDING', True)
+        self.ENABLE_PREF_EXTRACTION = getattr(main_config, 'ENABLE_PREF_EXTRACTION', True)
+        self.ENABLE_PREF_LLM_EXTRACTION = getattr(main_config, 'ENABLE_PREF_LLM_EXTRACTION', False)
         
         # Embedding Pipeline Configuration
         self.EMBEDDING_QUEUE = "embedding_queue"  # Redis Stream key
         self.EMBEDDING_BATCH_SIZE = 10
+
+        # Preference Extraction Pipeline
+        self.PREF_QUEUE = "preference_queue"  # Redis Stream key
         
         # Retrieval Configuration
         self.DEFAULT_RETRIEVAL_K = 6

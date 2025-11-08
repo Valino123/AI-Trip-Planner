@@ -11,23 +11,20 @@ trip_planner/
 │   ├── orchestrate.py       # LangGraph state machine (agent loop)
 │   ├── role.py              # Agent persona/system prompt
 │   ├── llm.py               # LLM initialization (Qwen + embeddings)
-│   ├── tools.py             # External tools (search, weather)
+│   ├── tools/               # External tools package (search, weather)
 │   └── context.py           # Context window management
 │
 ├── Memory System (Production-Grade)
 │   ├── memory.py            # Re-exports for backward compatibility
 │   └── memory/              # Multi-tier memory implementation
-│       ├── README.md        # Memory system quick start
-│       ├── OVERVIEW.md      # Architecture documentation
-│       ├── MEMORY_ARCHITECTURE.md  # Complete system guide
-│       ├── schema.sql       # PostgreSQL database schema
-│       ├── legacy.py        # JSONL-based SimpleMemory
 │       ├── models.py        # Data models
-│       ├── connections.py   # Connection managers
-│       ├── manager.py       # Memory orchestrator
-│       ├── intra_session.py # Redis (fast, temporary)
-│       ├── inter_session.py # PostgreSQL + Qdrant (persistent)
-│       └── preferences.py   # User preferences (cached)
+│       ├── mem_config.py    # Memory configuration (extends global config)
+│       ├── connections/     # Connection managers (Redis, MongoDB, Qdrant)
+│       ├── stores/          # Stores for each tier
+│       │   ├── intra_session.py   # Redis (fast, temporary)
+│       │   ├── inter_session.py   # MongoDB + Qdrant (persistent)
+│       │   └── preferences.py     # MongoDB + Redis cache
+│       └── manager.py       # Unified memory orchestrator
 │
 ├── Entry Points
 │   ├── main.py              # CLI interface for testing
@@ -42,7 +39,6 @@ trip_planner/
 │   └── examples/            # Example outputs & screenshots
 │
 └── Utilities
-    └── version.py           # Version information
 ```
 
 ## 🚀 Quick Start
@@ -84,12 +80,12 @@ result = app(state)
 - TTL: 2 hours (configurable)
 - Use case: Current conversation context
 
-**Inter-Session** (PostgreSQL + Qdrant):
+**Inter-Session** (MongoDB + Qdrant):
 - Persistent conversation storage
 - Semantic vector search across all past conversations
 - Use case: "Remember when we planned a trip to Europe?"
 
-**User Preferences** (PostgreSQL + Redis cache):
+**User Preferences** (MongoDB + Redis cache):
 - Long-term user-specific data
 - Two-tier caching for performance
 - Use case: Travel style, budget preferences, dietary restrictions
@@ -98,13 +94,27 @@ result = app(state)
 
 Set in `.env`:
 ```bash
-# Memory Mode
-USE_LEGACY_MEMORY=True  # True = JSONL, False = Production
+# Enable production memory and verbose logs
+USE_LTM=true
+VERBOSE=true
 
-# Production (if USE_LEGACY_MEMORY=False)
-REDIS_HOST=localhost
-PG_HOST=localhost
-QDRANT_HOST=localhost
+# Redis (intra-session)
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_DB=0
+
+# MongoDB (inter-session + preferences)
+MONGO_URI=mongodb://127.0.0.1:27017
+MONGO_DB=trip_planner
+
+# Qdrant (vector search)
+QDRANT_URL=http://127.0.0.1:6333
+QDRANT_HTTPS=false
+QDRANT_COLLECTION=conversations
+
+# Pipelines
+ENABLE_ASYNC_EMBEDDING=true
+ENABLE_PREF_EXTRACTION=true
 ```
 
 See [memory/README.md](./memory/README.md) for detailed documentation.
@@ -116,7 +126,7 @@ See [memory/README.md](./memory/README.md) for detailed documentation.
 - Implements ReAct pattern (Reason → Act → Observe)
 - Automatic tool calling and response generation
 
-### Tools (`tools.py`)
+### Tools (`tools/`)
 - `search_tool`: Web search (Wikipedia → DuckDuckGo fallback)
 - `weather_tool`: Weather forecasts (Open-Meteo API)
 - Extensible: Add new tools by decorating functions with `@tool`
@@ -204,10 +214,8 @@ QDRANT_COLLECTION=conversations
 ## 📚 Documentation
 
 - **Quick Start**: This file
-- **Memory System**: [memory/README.md](./memory/README.md)
-- **Architecture**: [memory/OVERVIEW.md](./memory/OVERVIEW.md)
-- **Full Docs**: [memory/MEMORY_ARCHITECTURE.md](./memory/MEMORY_ARCHITECTURE.md)
-- **Database**: [memory/schema.sql](./memory/schema.sql)
+- **Memory System**: memory module sources under `trip_planner/memory/`
+- **Architecture**: see repository `architecture.md`
 - **Implementation**: [docs/IMPLEMENTATION_SUMMARY.md](./docs/IMPLEMENTATION_SUMMARY.md)
 
 ## 🧪 Testing
@@ -216,8 +224,8 @@ QDRANT_COLLECTION=conversations
 # Test imports
 python -c "from trip_planner import make_app; print('✓ Imports work')"
 
-# Test memory system
-python -c "from trip_planner.memory import SimpleMemory; print('✓ Memory works')"
+# Test production memory init
+python -c \"from trip_planner.memory import create_memory_manager; m=create_memory_manager(); print('✓ Memory ready')\"
 
 # Run CLI
 python -m trip_planner.main
@@ -265,9 +273,9 @@ Core:
 - `langchain-openai` - LLM integration
 - `numpy` - Vector operations
 
-Production Memory (optional):
+Production Memory:
 - `redis` - Fast caching
-- `sqlalchemy` - PostgreSQL ORM
+- `pymongo` - MongoDB driver
 - `qdrant-client` - Vector search
 
 Install:
@@ -276,7 +284,7 @@ Install:
 pip install -r ../requirements.txt
 
 # With production memory
-pip install redis sqlalchemy psycopg2-binary qdrant-client
+pip install redis pymongo qdrant-client
 ```
 
 ## 🔍 Code Overview
@@ -355,6 +363,6 @@ def call_agent(state):
 
 ---
 
-**Version**: See [version.py](./version.py)  
+**Version**: See `trip_planner/__init__.py`  
 **Last Updated**: 2025-11-07  
 **Status**: ✅ Production Ready

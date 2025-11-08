@@ -111,4 +111,32 @@ class UserPreferenceStore:
         prefs[key] = value
         return self.set_preferences(user_id, prefs)
 
+    # ---------------------- Async Extraction Queue ----------------------
+
+    def queue_extraction_job(self, user_id: str, session_id: str) -> bool:
+        """
+        Queue a preference extraction job to Redis Streams.
+        The worker will fetch conversation from MongoDB and extract preferences.
+        """
+        if not self.config.ENABLE_PREF_EXTRACTION:
+            return False
+
+        client = self.redis_manager.get_client()
+        if not client:
+            return False
+
+        try:
+            job = {
+                "user_id": user_id,
+                "session_id": session_id,
+            }
+            client.xadd(self.config.PREF_QUEUE, job)
+            if self.config.VERBOSE:
+                print(f"[Preferences] ✓ Queued extraction job: user={user_id}, session={session_id}")
+            return True
+        except Exception as e:
+            if self.config.VERBOSE:
+                print(f"[Preferences] Queue extraction failed: {e}")
+            return False
+
 

@@ -4,7 +4,10 @@ from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AI
 
 
 def _blocks(seq: List[BaseMessage]) -> List[Tuple[int, int]]:
-    """把序列切成块: 普通块=单条. 工具块=AI(tool_calls)+后续所有ToolMessage"""
+    """Split a message sequence into logical blocks.
+    - Plain block: a single message
+    - Tool block: AI(tool_calls) followed by all subsequent ToolMessage(s)
+    """
     out = []
     i = 0
     while i < len(seq):
@@ -24,7 +27,7 @@ def _blocks(seq: List[BaseMessage]) -> List[Tuple[int, int]]:
 def trim_context(
     msgs: List[BaseMessage],
     max_n: int,
-    keep_system: int = 2,   # 通常 = 2: 原始 role + 记忆注入
+    keep_system: int = 2,   # usually 2: original role + injected memory summary
 ) -> List[BaseMessage]:
     """
     Trim the chat history (message list) into a context window usable by the model.
@@ -104,7 +107,7 @@ def trim_context(
     if not msgs:
         return [SystemMessage(content="You are a helpful assistant.")]
 
-    # 1) 前缀 System(不裁剪)
+    # 1) Prefix System messages (not trimmed)
     prefix: List[BaseMessage] = []
     i = 0
     while i < len(msgs) and isinstance(msgs[i], SystemMessage) and len(prefix) < keep_system:
@@ -115,14 +118,14 @@ def trim_context(
         out = prefix or [SystemMessage(content="You are a helpful assistant.")]
         return out[:max_n]
 
-    # 2) 找"最近一条 Human"
+    # 2) Find the most recent Human message
     last_human = None
     for t in range(len(tail_all) - 1, -1, -1):
         if isinstance(tail_all[t], HumanMessage):
             last_human = t
             break
 
-    # 如果没有 Human, 就按预算从结尾取块即可
+    # If no Human, take blocks from the end within budget
     if last_human is None:
         tail_blocks = _blocks(tail_all)
         budget = max_n - len(prefix)
@@ -142,43 +145,39 @@ def trim_context(
             out = [SystemMessage(content="You are a helpful assistant.")] + out
         return out[:max_n]
 
-    # 3) 强制保留: 最近 Human 及其之后所有消息(避免工具自旋)
-    must_keep_tail = tail_all[last_human:]        # 这段不再裁剪
+    # 3) Force-keep: latest Human and everything after it (prevents tool spin)
+    must_keep_tail = tail_all[last_human:]
     out = prefix + must_keep_tail
     if len(out) >= max_n:
-        # 已经超/达预算, 直接返回(保证合法且不自旋)
         if not isinstance(out[0], SystemMessage):
             out = [SystemMessage(content="You are a helpful assistant.")] + out
         return out
 
-    # 4) 还有预算: 从最近 Human 之前向前"按块"补上下文, 直到达到/超过预算
+    # 4) With remaining budget, add blocks from before the last Human backward
     head = tail_all[:last_human]
-    head_blocks = _blocks(head)                   # 不跨块截断
+    head_blocks = _blocks(head)
     budget = max_n - len(out)
 
     prepend: List[BaseMessage] = []
     total = 0
     for s, e in reversed(head_blocks):
         L = e - s
-        prepend[0:0] = head[s:e]                  # 头部插入, 保持原顺序
+        prepend[0:0] = head[s:e]                  # prepend while keeping order
         total += L
         if total >= budget:
             break
 
     trimmed = prefix + prepend + must_keep_tail
 
-    # 5) 兜底 System + 最终限长(只在极端情况下截掉"补上的前缀部分", 不动 must_keep_tail)
+    # 5) Ensure first System + final length limit (drop only the prepended part)
     if not trimmed or not isinstance(trimmed[0], SystemMessage):
         trimmed = [SystemMessage(content="You are a helpful assistant.")] + trimmed
 
     if len(trimmed) > max_n:
-        # 只裁掉我们"补上的 head 前缀", 绝不动 must_keep_tail, 避免工具对被切断
-        # 计算可以保留给 prepend 的空间
+        # Keep prefix + tail intact, only drop part of the prepended head
         space_for_prepend = max_n - (len(prefix) + len(must_keep_tail))
         if space_for_prepend < 0:
-            # 极端: prefix + tail 已超预算, 仍保留它们, 丢弃 prepend
             return prefix + must_keep_tail
-        # 砍掉多余的 prepend 前段
         keep_prepend = prepend[-space_for_prepend:] if space_for_prepend > 0 else []
         return prefix + keep_prepend + must_keep_tail
 

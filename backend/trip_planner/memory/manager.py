@@ -70,6 +70,13 @@ class ProductionMemoryManager:
         if success and self.config.ENABLE_ASYNC_EMBEDDING:
             summary = self._create_conversation_summary(messages)
             self.inter_session.queue_embedding_job(user_id, session_id, summary)
+
+        # 3b. Queue preference extraction (async)
+        if success and self.config.ENABLE_PREF_EXTRACTION:
+            try:
+                self.user_preferences.queue_extraction_job(user_id, session_id)
+            except Exception:
+                pass
         
         # 4. Clear from Redis
         self.intra_session.clear_session(session_id)

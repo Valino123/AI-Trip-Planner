@@ -8,7 +8,8 @@ from .memory import (
     ProductionMemoryManager,
     memory_config,
 )
-from .version import __version__
+
+__version__ = "0.1.0"
 
 __all__ = [
     "make_app", "TOOLS", "init_llm", "role_template",
