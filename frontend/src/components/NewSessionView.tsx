@@ -26,7 +26,7 @@ export default function NewSessionView({ token, onCreated }: Props) {
   }
 
   return (
-    <div style={{padding:24, marginLeft: '200px'}}>
+    <div style={{padding:24}}>
       <h3>New Session</h3>
       <div style={{marginTop:12, display:'flex', gap:8, width: '400px'}}>
         <input
@@ -36,7 +36,7 @@ export default function NewSessionView({ token, onCreated }: Props) {
           placeholder="Session title"
           style={{flex:1, padding:12, border:'1px solid #ddd', borderRadius:8}}
         />
-        <button onClick={create} style={{padding:'12px 16px', borderRadius:8}}>Create</button>
+        <button onClick={create} style={{padding:'12px 16px', borderRadius:8, background:'#2563eb', color:'#fff', border:'none'}}>Create</button>
       </div>
     </div>
   )

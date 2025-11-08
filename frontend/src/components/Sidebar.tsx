@@ -34,13 +34,13 @@ export default function Sidebar({ token, username, onUsername, onLogout, onNewSe
   }
 
   return (
-    <div style={{width: 280, borderRight:'1px solid #303030ff', padding:12, display:'flex', flexDirection:'column', gap:12, height:'100vh', overflowY:'auto'}}>
+    <div style={{width: 280, borderRight:'1px solid #e5e7eb', padding:12, display:'flex', flexDirection:'column', gap:12, height:'100vh', overflowY:'auto', background:'#f9fafb'}}>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-        <div style={{fontWeight:600}}>{username || 'User'}</div>
+        <div style={{fontWeight:600, color:'#111827'}}>{username || 'User'}</div>
         <button onClick={logout} style={{padding:'6px 10px', borderRadius:6}}>Logout</button>
       </div>
 
-      <button onClick={onNewSession} style={{padding:'8px 10px', borderRadius:8}}>+ New Session</button>
+      <button onClick={onNewSession} style={{padding:'8px 10px', borderRadius:8, background:'#2563eb', color:'#fff', border:'none'}}>+ New Session</button>
 
       <div style={{marginTop:8}}>
         <div style={{fontSize:12, color:'#6b7280', marginBottom:6}}>Sessions</div>
@@ -50,11 +50,12 @@ export default function Sidebar({ token, username, onUsername, onLogout, onNewSe
               key={s.session_id}
               onClick={()=>onSelectSession(s)}
               style={{
-                textAlign:'center',
-                padding:'8px 10px',
+                textAlign:'left',
+                padding:'10px 12px',
                 borderRadius:8,
-                background: currentSessionId === s.session_id ? '#293645ff' : '#373737',
-                border:'1px solid #eee'
+                background: currentSessionId === s.session_id ? '#2563eb' : '#ffffff',
+                color: currentSessionId === s.session_id ? '#ffffff' : '#111827',
+                border: currentSessionId === s.session_id ? '1px solid #2563eb' : '1px solid #e5e7eb'
               }}
             >
               {s.session_name}

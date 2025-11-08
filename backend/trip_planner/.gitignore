@@ -1,3 +1,7 @@
-API_KEY
 __pycache__
-memory_store.jsonl
+cli\__pycache__
+docs 
+examples 
+memory\__pycache__
+memory\connections\__pycache__ 
+memory\stores\__pycache__ 

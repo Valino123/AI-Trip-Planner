@@ -88,7 +88,8 @@ export default function ChatView({ token, session_id }: Props) {
           <div key={i} style={{display:'flex', marginBottom:12, justifyContent: m.type==='human'?'flex-end':'flex-start'}}>
             <div style={{
               maxWidth: '72%',
-              background: m.type==='human' ? '#134741ff' : '#383c55ff',
+              background: m.type==='human' ? '#2563eb' : '#f3f4f6',
+              color: m.type==='human' ? '#ffffff' : '#111827',
               border:'1px solid #e5e7eb',
               borderRadius: 12,
               padding: '10px 12px',
@@ -130,7 +131,7 @@ export default function ChatView({ token, session_id }: Props) {
             overflowY:'auto'
           }}
         />
-        <button onClick={send} disabled={loading} style={{padding:'12px 16px', borderRadius:8, opacity: loading ? 0.7 : 1}}>
+        <button onClick={send} disabled={loading} style={{padding:'12px 16px', borderRadius:8, opacity: loading ? 0.7 : 1, background:'#2563eb', color:'#fff', border:'none'}}>
           {loading ? 'Sending...' : 'Send'}
         </button>
       </div>

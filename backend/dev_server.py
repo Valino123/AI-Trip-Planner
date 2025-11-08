@@ -49,12 +49,6 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Tool
 # -------------------- config --------------------
 from config import config
 
-# DATA_ROOT = os.environ.get("DATA_ROOT", "./data")
-# USE_LTM = os.environ.get("USE_LTM", "0").lower() in {"1", "true", "yes"}
-# VERBOSE = os.environ.get("VERBOSE", "1").lower() in {"1", "true", "yes"}
-# MAX_TURNS = int(os.environ.get("MAX_TURNS_IN_CONTEXT", "16"))
-# KEEP_SYSTEM = int(os.environ.get("KEEP_SYSTEM", "2"))
-
 DATA_ROOT = config.DATA_ROOT
 USE_LTM = config.USE_LTM
 VERBOSE = config.VERBOSE

@@ -22,3 +22,5 @@ class CLI:
 
     def send_response(self, message: str) -> None:
         print(f"[Agent] > {message.encode('utf-8', errors='replace').decode('utf-8')}")
+
+

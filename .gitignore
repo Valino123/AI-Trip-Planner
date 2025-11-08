@@ -1,11 +1,8 @@
 API_KEY
+user_token.txt 
+example0.jpg
 __pycache__
-memory_store.jsonl
-user_data
-ADMIN_IDENTITY_TOKEN
-.vscode
-data
-ID_TOKEN
-eval_runs
-.test
-.report
+eval 
+report 
+test 
+Dockerfile 

@@ -6,3 +6,21 @@ langgraph==0.6.8
 numpy==2.2.6
 pydantic==2.11.10
 requests==2.32.5
+
+# ===== Production Memory System Dependencies =====
+# Redis (Intra-session memory)
+redis==5.0.1
+
+# MongoDB (Inter-session + Preferences)
+pymongo==4.10.1
+
+# (Optional) PostgreSQL (legacy)
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# Qdrant (Vector search)
+qdrant-client==1.7.0
+
+# Optional: For async embedding workers
+# celery==5.3.4  # Uncomment if using Celery instead of Redis Streams
+# redis[hiredis]==5.0.1  # High-performance Redis parser

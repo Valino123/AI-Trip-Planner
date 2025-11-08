@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: trip_planner_worker
+    env_file:
+      - .env
+    environment:
+      # Ensure HTTP for local qdrant unless you use TLS
+      QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+      QDRANT_HTTPS: ${QDRANT_HTTPS:-false}
+      ENABLE_ASYNC_EMBEDDING: "true"
+      # Point to compose services if using docker
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
+    depends_on:
+      - redis
+      - qdrant
+    restart: unless-stopped
+
+
